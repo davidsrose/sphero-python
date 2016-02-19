@@ -131,7 +131,7 @@ STRM_MASK2 = dict(
 # The following class adapted from https://gist.github.com/ali1234/5e5758d9c591090291d6
 
 class BTInterface(btle.DefaultDelegate):
-    def __init__(self, deviceAddress):
+    def __init__(self, deviceAddress, spheroClass):
         btle.DefaultDelegate.__init__(self)
 
         # Address type must be "random" or it won't connect.
@@ -139,6 +139,13 @@ class BTInterface(btle.DefaultDelegate):
         self.peripheral.setDelegate(self)
 
         self.seq = 0
+
+        # for callbacks to child class
+        self.spheroClass = spheroClass
+
+        # output of user hack shell
+        self.show_shell = False
+        self.show_notifications = True
 
         # Attribute UUIDs are identical to Ollie.
         self.antidos = self.getSpheroCharacteristic('2bbd')
@@ -185,11 +192,23 @@ class BTInterface(btle.DefaultDelegate):
     def send(self, data):
         self.roll.write(data, withResponse=True)
 
+    def userhack_cmd(self, cmd):
+        # make sure to add CR
+        cmd = cmd.strip()
+        cmd += "\r"
+        self.roll.write(cmd, withResponse=False)
+
     def handleNotification(self, cHandle, data):
-        # print 'Notification:', cHandle, data.encode('hex')
-        # print 'BB8 Response:', cHandle,
-        Sphero().recv(data)
-        # print data
+        if self.show_shell and len(data) and ord(data[0]) <= 0x7f:
+            # ascii text
+            sys.stdout.write(data)
+        else:
+            # data
+            if self.show_notifications:
+                print '* Notification:', cHandle, data.encode('hex')
+
+            self.spheroClass.recv(data)
+
         return data
 
     def waitForNotifications(self, time):
@@ -240,7 +259,7 @@ class Sphero(threading.Thread):
         threading.Thread.__init__(self)
         self.target_name = target_name
         self.bt = None
-        # Use "sudo hcitool lescan" to find BB8's MAC address input it at deviceAddress = 
+        # Use "sudo hcitool lescan" to find BB8's MAC address input it at deviceAddress =
         self.deviceAddress = 'DF:79:DD:9C:B6:1D'
         self.shutdown = False
         self.is_connected = False
@@ -255,7 +274,7 @@ class Sphero(threading.Thread):
         self._sync_callback_queue = []
 
     def connect(self):
-        self.bt = BTInterface(self.deviceAddress)
+        self.bt = BTInterface(self.deviceAddress, self)
         # self.is_connected = self.bt.connect()
         self.is_connected = True
         return True
@@ -867,11 +886,11 @@ class Sphero(threading.Thread):
         '''
         The data payload of the async message is 1h bytes long and
         formatted as follows::
-    
+
           --------
           |State |
           --------
-    
+
         The power state byte:
           * 01h = Battery Charging,
           * 02h = Battery OK,
@@ -885,11 +904,11 @@ class Sphero(threading.Thread):
         '''
         The data payload of the async message is 10h bytes long and
         formatted as follows::
-    
+
           -----------------------------------------------------------------
           |X | Y | Z | AXIS | xMagnitude | yMagnitude | Speed | Timestamp |
           -----------------------------------------------------------------
-    
+
         * X, Y, Z - Impact components normalized as a signed 16-bit\
         value. Use these to determine the direction of collision event. If\
         you don't require this level of fidelity, the two Magnitude fields\
@@ -907,7 +926,7 @@ class Sphero(threading.Thread):
         this value.
         '''
         output = {}
-    
+
         output['X'], output['Y'], output['Z'], output['Axis'], output['xMagnitude'], output['yMagnitude'], output[
             'Speed'], output['Timestamp'] = struct.unpack_from('>hhhbhhbI', ''.join(data[5:]))
         return output
