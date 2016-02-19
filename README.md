@@ -11,7 +11,9 @@ Enabling User Hack Mode
 -----------------------
 
 To enable UHM (only needed one time):
-```% ./userhackmode.py```
+```
+% ./userhackmode.py
+```
 
 If everything works correctly (I had to shutdown bluetoothd as it seems to block the BT device), and your Bluetooth device is in proximity to your Orbotix gadget, it should connect, blink its RGB LED and then activate stuff.
 
@@ -23,7 +25,8 @@ User Hack Shell
 **userhackshell.py** is an interactive `python-cmd` based shell to probe around in UHM.
 
 Commands:
-```help - shows internal commands
+```
+help - shows internal commands
 connect - Connect to your BLE device. You need to be close to it to activate.
 disconnect - well...
 quit - disconnect and quit shell
@@ -31,11 +34,13 @@ log - activate dumping following output of stdout to logfile.log
 flash - blink RGB LED red, green, blue, off
 quote <value> - send value directly to device. useful for "quote help"
 
-All other commands get send to the device.```
+All other commands get send to the device.
+```
 
 Usage example:
 
-```% ./userhackshell.py
+```
+% ./userhackshell.py
 Orbotix User Hack Shell
 (Cmd) connect
 Connecting ...
